@@ -49,23 +49,43 @@ enum Race {
 }
 
 impl Race {
+    fn entries() -> impl Iterator<Item = Self> {
+        [
+            Race::WhiteCaucasian, 
+            Race::BlackAfrican, 
+            Race::NativeAmerican, 
+            Race::Asian, 
+            Race::PacificIslander, 
+            Race::Multiracial, 
+            Race::Hispanic, 
+            Race::Other
+        ].iter().copied()
+    }
+
     fn aggregate(races: impl Iterator<Item = Self>) -> HashMap<Self, u32> {
-        let mut race_counts = HashMap::from([
-            (Race::WhiteCaucasian , 0),
-            (Race::BlackAfrican   , 0),
-            (Race::NativeAmerican , 0),
-            (Race::Asian          , 0),
-            (Race::PacificIslander, 0),
-            (Race::Multiracial    , 0),
-            (Race::Hispanic       , 0),
-            (Race::Other          , 0)
-        ]);
-    
+        let mut race_counts = HashMap::from_iter(Race::entries().map(|race| (race, 0)));
         for race in races {
             race_counts.entry(race).and_modify(|count| *count += 1).or_insert(1);
         }
-
+    
         race_counts
+    }
+}
+
+impl std::fmt::Display for Race {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", match *self {
+            Race::WhiteCaucasian => "White",
+            Race::BlackAfrican => "Black or African American",
+            Race::NativeAmerican => "American Indian or Alaska Native",
+            Race::Asian => "Asian",
+            Race::PacificIslander => "Native Hawaiian & Other Pacific Island",
+            Race::Multiracial => "Multiracial",
+            Race::Hispanic => "Hispanic or Latino",
+            Race::Other => "Other"
+        })?;
+
+        Ok(())
     }
 }
 
@@ -158,6 +178,14 @@ impl TryFrom<HingeProfileCSVRecord> for HingeProfile {
             _ => return Err("Invalid value for Who Last Replied")
         };
 
+        if who_last_replied == WhoLastReplied::Met && value.convo == 0 {
+            return Err("Who Last Replied is Met but Conversation is False");
+        }
+
+        if who_last_replied == WhoLastReplied::None && value.convo != 0 {
+            return Err("Who Last Replied is None but Conversation is True");
+        }
+
         let ethnicity = Ethnicities(
             (if value.native_american       != 0  { Ethnicities::NATIVE_AMERICAN       } else { 0 }) |
             (if value.southeast_asian       != 0  { Ethnicities::SOUTHEAST_ASIAN       } else { 0 }) |
@@ -208,7 +236,77 @@ struct CountyHispanicDemographicsCSVRecord {
     two_or_more_races_hispanic: u32
 }
 
-fn example() -> Result<(), Box<dyn Error>> {
+#[derive(Debug)]
+struct RacialPreference {
+    race: Race,
+    hispanic: bool,
+    weight: f64,
+    count: u32
+}
+
+impl std::fmt::Display for RacialPreference {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:<55}   {:.4}   {}", format!("{} ({})", self.race, if self.hispanic { "Hispanic" } else { "Non-Hispanic" }), self.weight, self.count)?;
+        Ok(())
+    }
+}
+
+// fn aggregate_racial_preferences(
+//     profiles: &[HingeProfile], 
+//     race_distribution: HashMap<Race, f64>,
+//     race_distribution_hispanic: HashMap<Race, f64>
+// ) -> Vec<RacialPreference> {
+
+//     let mut race_counts = HashMap::from_iter(Race::entries().map(|race| (race, 0)));
+
+//     let races = profiles.iter().filter_map(|profile| profile.race);
+//     let hispanic_races = profiles
+//         .iter()
+//         .filter(|profile| profile.ethnicity.bits() & Ethnicities::HISPANIC_LATINO != 0)
+//         .map(|profile| if profile.ethnicity.bits() == Ethnicities::HISPANIC_LATINO 
+//             { Ethnicities::OTHER } else 
+//             { profile.ethnicity.bits() & !Ethnicities::HISPANIC_LATINO })
+//         .filter_map(|ethnicity_bits| Race::try_from(ethnicity_bits).ok());
+
+    
+    
+    
+
+//     let total_profiles_with_bkg_info = profiles
+//         .iter()
+//         .filter(|profile| profile.race.is_some() || profile.ethnicity.bits() & Ethnicities::HISPANIC_LATINO != 0)
+//         .count();
+//     let total_profiles = profiles.len();
+
+//     hispanic_race_counts.remove(&Race::Hispanic);
+
+//     println!("Total Profiles: {}", total_profiles);
+//     println!("Total Profiles with Background Info: {}", total_profiles_with_bkg_info);
+//     println!("Race Counts: {:?}", race_counts);
+//     println!("Race (Hispanic) Breakdown: {:?}", hispanic_race_counts);
+
+//     race_counts.remove(&Race::Hispanic);
+
+//     println!("Race Index");
+//     for (race, count) in race_counts.iter() {
+//         if *count < SAMPLE_CUTOFF {
+//             println!("\t{:?}: {}", race, "NOT ENOUGH SAMPLES");
+//         } else {
+//             println!("\t{:?}: {}", race, *count as f64 / race_weights[race]);
+//         }
+//     }
+    
+//     println!("Hispanic Race Index");
+//     for (race, count) in hispanic_race_counts.iter() {
+//         if *count < SAMPLE_CUTOFF {
+//             println!("\t{:?}Hispanic: {}", race, "NOT ENOUGH SAMPLES");
+//         } else {
+//             println!("\t{:?}Hispanic: {}", race, *count as f64 / (race_weights[&Race::Hispanic] * hispanic_race_weights[race]));
+//         }
+//     }
+// }
+
+fn run_analysis() -> Result<(), Box<dyn Error>> {
 
     // Source: https://datausa.io/profile/geo/cook-county-il#race_and_ethnicity
     // Source: https://datausa.io/profile/geo/dupage-county-il#race_and_ethnicity
@@ -371,37 +469,117 @@ fn example() -> Result<(), Box<dyn Error>> {
         .count();
     let total_profiles = profiles.len();
 
-    println!("Total Profiles: {}", total_profiles);
-    println!("Total Profiles with Background Info: {}", total_profiles_with_bkg_info);
-    println!("Race Counts: {:?}", race_counts);
-    println!("Hispanic Race Counts: {:?}", hispanic_race_counts);
-
-    race_counts.remove(&Race::Hispanic);
     hispanic_race_counts.remove(&Race::Hispanic);
 
-    println!("Race Index");
-    for (race, count) in race_counts.iter() {
-        if *count < SAMPLE_CUTOFF {
-            println!("\t{:?}: {}", race, "NOT ENOUGH SAMPLES");
+    println!("\nTotal Profiles: {}", total_profiles);
+    println!("Total Profiles with Background Info: {}", total_profiles_with_bkg_info);
+    //println!("\nRace Counts: {:?}", race_counts);
+    //println!("Race (Hispanic) Breakdown: {:?}", hispanic_race_counts);
+
+    race_counts.remove(&Race::Hispanic);
+
+    let mut racial_preferences = Vec::new();
+
+    for (&race, &count) in race_counts.iter() {
+        racial_preferences.push(RacialPreference { 
+            race, 
+            hispanic: false, 
+            weight: if count < SAMPLE_CUTOFF { 0.0 } else { count as f64 / race_weights[&race] },
+            count
+        });
+    }
+
+    for (&race, &count) in hispanic_race_counts.iter() {
+        racial_preferences.push(RacialPreference { 
+            race, 
+            hispanic: true, 
+            weight: if count < SAMPLE_CUTOFF { 0.0 } else { count as f64 / (race_weights[&Race::Hispanic] * hispanic_race_weights[&race]) },
+            count
+        });
+    }
+
+    let racial_preferences_total_weight = racial_preferences.iter().map(|preference| preference.weight).sum::<f64>();
+    racial_preferences.iter_mut().for_each(|preference| preference.weight /= racial_preferences_total_weight);
+    racial_preferences.sort_by(|a, b| b.weight.partial_cmp(&a.weight).expect("Bad comparison in racial preferences"));
+
+    println!("\n\t  Race Preference Index (Adjusted for Population, Match Sample Cutoff={})", SAMPLE_CUTOFF);
+    println!("\t{:^55}   {}   {}", "Race", "Weight", "Matches"); 
+    for preference in racial_preferences.iter() {
+        println!("\t{}", preference);
+    }
+
+    // Metrics
+    let mut no_convo_count = 0;
+    let mut no_convo_attempted_count = 0;
+    let mut no_convo_you_failed_count = 0;
+    let mut no_convo_they_failed_count = 0;
+    let mut convo_started_count = 0;
+    let mut convo_started_you_failed_count = 0;
+    let mut convo_started_they_failed_count = 0;
+    let mut you_met_count = 0;
+
+    for profile in profiles.iter() {
+        if profile.convo {
+            convo_started_count += 1;
+            match profile.who_last_replied {
+                WhoLastReplied::You => convo_started_you_failed_count += 1,
+                WhoLastReplied::Them => convo_started_they_failed_count += 1,
+                WhoLastReplied::Met => you_met_count += 1,
+                WhoLastReplied::None => unreachable!("None should not be in convo")
+            }
         } else {
-            println!("\t{:?}: {}", race, *count as f64 / race_weights[race]);
+            no_convo_count += 1;
+            match profile.who_last_replied {
+                WhoLastReplied::You => no_convo_you_failed_count += 1,
+                WhoLastReplied::Them => no_convo_they_failed_count += 1,
+                WhoLastReplied::None => no_convo_attempted_count += 1,
+                WhoLastReplied::Met => unreachable!("Met should not be in no convo")
+            }
         }
     }
+
+    let convo_you_attempted_count = total_profiles - no_convo_attempted_count - no_convo_they_failed_count;
     
-    println!("Hispanic Race Index");
-    for (race, count) in hispanic_race_counts.iter() {
-        if *count < SAMPLE_CUTOFF {
-            println!("\t{:?}Hispanic: {}", race, "NOT ENOUGH SAMPLES");
-        } else {
-            println!("\t{:?}Hispanic: {}", race, *count as f64 / (race_weights[&Race::Hispanic] * hispanic_race_weights[race]));
-        }
-    }
+    let conversation_interested_score = convo_you_attempted_count as f64 / total_profiles as f64;
+    let conversation_they_failed_score = no_convo_they_failed_count as f64 / total_profiles as f64;
+    let conversation_no_one_interested_score = no_convo_attempted_count as f64 / total_profiles as f64;
+    let conversation_starter_score = convo_started_count as f64 / convo_you_attempted_count as f64;
+    let conversation_starter_failed_score = no_convo_you_failed_count as f64 / convo_you_attempted_count as f64;
+    let conversation_to_them_ghosting_score = convo_started_you_failed_count as f64 / convo_started_count as f64;
+    let conversation_to_you_ghosting_score = convo_started_they_failed_count as f64 / convo_started_count as f64;
+    let conversation_to_date_score = you_met_count as f64 / convo_started_count as f64;
+
+    println!("\nGhosting Metrics");
+    println!("You end up ghosting {:.2}% of your matches, {:.2}% of your matches end up ghosting you, {:.2}% of your matches have no activity, and {:.2}% of your matches result in a date.", 
+        (no_convo_they_failed_count + convo_started_they_failed_count) as f64 / total_profiles as f64 * 100.0, 
+        (no_convo_you_failed_count + convo_started_you_failed_count) as f64 / total_profiles as f64 * 100.0,
+        no_convo_attempted_count as f64 / total_profiles as f64 * 100.0,
+        you_met_count as f64 / total_profiles as f64 * 100.0);
+
+    
+    println!("\nConversation Success Metrics");
+    println!("You are interested in having a conversation with {:.2}% of your matches, {:.2}% of the time you are not interested despite receiving a message, {:.2}% of the time no one is interested.", 
+        conversation_interested_score * 100.0,
+        conversation_they_failed_score * 100.0,
+        conversation_no_one_interested_score * 100.0
+    );
+    println!("Of those you are interested in having a conversation with, you succeed {:.2}% of the time and fail {:.2}% of the time.", 
+        conversation_starter_score * 100.0,
+        conversation_starter_failed_score * 100.0);
+    println!("Of those you succeed in starting a conversation with, you eventually ghost them {:.2}% of the time, they eventually ghost you {:.2}% of the time, and you go on a date with {:.2}% of them.", 
+        conversation_to_you_ghosting_score * 100.0, 
+        conversation_to_them_ghosting_score * 100.0, 
+        conversation_to_date_score * 100.0);
+    
+    println!("\nDate Conversion Rate");
+    println!("Given that you're interested in having a conversation with your match, there's a {:.2}% chance you go on a date.", 
+        conversation_starter_score * conversation_to_date_score * 100.0);
 
     Ok(())
 }
 
 fn main() {
-    if let Err(err) = example() {
+    if let Err(err) = run_analysis() {
         println!("error running example: {}", err);
         process::exit(1);
     }
