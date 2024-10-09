@@ -463,16 +463,16 @@ fn run_analysis() -> Result<(), Box<dyn Error>> {
     
     
 
-    let total_profiles_with_bkg_info = profiles
+    let total_profiles_with_race_info = profiles
         .iter()
-        .filter(|profile| profile.race.is_some() || profile.ethnicity.bits() & Ethnicities::HISPANIC_LATINO != 0)
+        .filter(|profile| profile.race.is_some())
         .count();
     let total_profiles = profiles.len();
 
     hispanic_race_counts.remove(&Race::Hispanic);
 
     println!("\nTotal Profiles: {}", total_profiles);
-    println!("Total Profiles with Background Info: {}", total_profiles_with_bkg_info);
+    println!("Total Profiles with Race Information: {}", total_profiles_with_race_info);
     //println!("\nRace Counts: {:?}", race_counts);
     //println!("Race (Hispanic) Breakdown: {:?}", hispanic_race_counts);
 
