@@ -549,7 +549,7 @@ fn run_analysis() -> Result<(), Box<dyn Error>> {
     let conversation_to_you_ghosting_score = convo_started_they_failed_count as f64 / convo_started_count as f64;
     let conversation_to_date_score = you_met_count as f64 / convo_started_count as f64;
 
-    println!("\nGhosting Metrics");
+    println!("\nMatch Outcome Metrics");
     println!("You end up ghosting {:.2}% of your matches, {:.2}% of your matches end up ghosting you, {:.2}% of your matches have no activity, and {:.2}% of your matches result in a date.", 
         (no_convo_they_failed_count + convo_started_they_failed_count) as f64 / total_profiles as f64 * 100.0, 
         (no_convo_you_failed_count + convo_started_you_failed_count) as f64 / total_profiles as f64 * 100.0,
