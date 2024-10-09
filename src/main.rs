@@ -563,16 +563,16 @@ fn run_analysis() -> Result<(), Box<dyn Error>> {
         conversation_they_failed_score * 100.0,
         conversation_no_one_interested_score * 100.0
     );
-    println!("Of those you are interested in having a conversation with, you succeed {:.2}% of the time and fail {:.2}% of the time.", 
+    println!("Of the matches you are interested in, you succeed in starting a conversation {:.2}% of the time and fail {:.2}% of the time.", 
         conversation_starter_score * 100.0,
         conversation_starter_failed_score * 100.0);
-    println!("Of those you succeed in starting a conversation with, you eventually ghost them {:.2}% of the time, they eventually ghost you {:.2}% of the time, and you go on a date with {:.2}% of them.", 
+    println!("Of the matches you have a conversation with, you eventually ghost them {:.2}% of the time, they eventually ghost you {:.2}% of the time, and you go on a date {:.2}% of the time.", 
         conversation_to_you_ghosting_score * 100.0, 
         conversation_to_them_ghosting_score * 100.0, 
         conversation_to_date_score * 100.0);
     
     println!("\nDate Conversion Rate");
-    println!("Given that you're interested in having a conversation with your match, there's a {:.2}% chance you go on a date.", 
+    println!("Given that you're interested in having a conversation with your match, there's a {:.2}% chance that you go on a date.", 
         conversation_starter_score * conversation_to_date_score * 100.0);
 
     Ok(())
