@@ -241,12 +241,13 @@ struct RacialPreference {
     race: Race,
     hispanic: bool,
     weight: f64,
-    count: u32
+    count: u32,
+    population: f64
 }
 
 impl std::fmt::Display for RacialPreference {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:<55}   {:.4}   {}", format!("{} ({})", self.race, if self.hispanic { "Hispanic" } else { "Non-Hispanic" }), self.weight, self.count)?;
+        write!(f, "{:<55}   {:.4}   {:<7}   {:06.3} %", format!("{} ({})", self.race, if self.hispanic { "Hispanic" } else { "Non-Hispanic" }), self.weight, self.count, self.population * 100.0)?;
         Ok(())
     }
 }
@@ -485,7 +486,8 @@ fn run_analysis() -> Result<(), Box<dyn Error>> {
             race, 
             hispanic: false, 
             weight: if count < SAMPLE_CUTOFF { 0.0 } else { count as f64 / race_weights[&race] },
-            count
+            count,
+            population: race_weights[&race]
         });
     }
 
@@ -494,7 +496,8 @@ fn run_analysis() -> Result<(), Box<dyn Error>> {
             race, 
             hispanic: true, 
             weight: if count < SAMPLE_CUTOFF { 0.0 } else { count as f64 / (race_weights[&Race::Hispanic] * hispanic_race_weights[&race]) },
-            count
+            count,
+            population: race_weights[&Race::Hispanic] * hispanic_race_weights[&race]
         });
     }
 
@@ -502,8 +505,8 @@ fn run_analysis() -> Result<(), Box<dyn Error>> {
     racial_preferences.iter_mut().for_each(|preference| preference.weight /= racial_preferences_total_weight);
     racial_preferences.sort_by(|a, b| b.weight.partial_cmp(&a.weight).expect("Bad comparison in racial preferences"));
 
-    println!("\n\t  Race Preference Index (Adjusted for Population, Match Sample Cutoff={})", SAMPLE_CUTOFF);
-    println!("\t{:^55}   {}   {}", "Race", "Weight", "Matches"); 
+    println!("\n\t         Race Preference Index (Adjusted for Population, Match Sample Cutoff={})", SAMPLE_CUTOFF);
+    println!("\t{:^55}   {}    {}   {}", "Race", "Score", "Matches", "Population"); 
     for preference in racial_preferences.iter() {
         println!("\t{}", preference);
     }
