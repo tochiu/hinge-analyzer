@@ -1,4 +1,5 @@
 use std::{collections::HashMap, error::Error, hash::Hash, process};
+use colored::Colorize;
 
 type EthnicityBits = u16;
 
@@ -577,6 +578,10 @@ fn run_analysis() -> Result<(), Box<dyn Error>> {
     println!("\nDate Conversion Rate");
     println!("Given that you're interested in having a conversation with your match, there's a {:.2}% chance that you go on a date.", 
         conversation_starter_score * conversation_to_date_score * 100.0);
+    println!("Given that you're interested in going on a date with the match you're having a conversation with, there's a {:.2}% chance that you do.", 
+        conversation_to_date_score / (1.0 - conversation_to_you_ghosting_score) * 100.0);
+    println!("Given that you don't ghost your match, {} of your matches result in a date.", 
+        format!("{:.2}%", (you_met_count as f64 / (no_convo_you_failed_count + convo_started_you_failed_count + you_met_count) as f64 * 100.0)).green().bold());
 
     Ok(())
 }
